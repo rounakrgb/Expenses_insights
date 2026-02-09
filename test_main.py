@@ -1,0 +1,18 @@
+from fastapi.testclient import TestClient
+from main import app
+
+client = TestClient(app)
+
+def test_signup():
+    response = client.post(
+        "/signup",
+        json={"username": "testuser", "password": "1234"}
+    )
+    assert response.status_code in [200, 400]
+
+def test_login():
+    response = client.post(
+        "/login",
+        json={"username": "testuser", "password": "1234"}
+    )
+    assert response.status_code in [200, 401]
