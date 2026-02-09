@@ -13,6 +13,6 @@ def test_signup():
 def test_login():
     response = client.post(
         "/login",
-        json={"username": "testuser", "password": "1234"}
+        data={"username": "testuser", "password": "1234"}  # <-- use data= not json=
     )
-    assert response.status_code in [200, 401]
+    assert response.status_code in [200, 401] 
