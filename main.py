@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-from schemas import UserCreate, UserLogin
-from models import User
+from schemas import ExpenseCreate, UserCreate, UserLogin
+from models import Expense, User
 from database import SessionLocal
 from password_utlis import hash_password, verify_password
 from jwt_utils import create_token
@@ -56,3 +56,22 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 @app.get("/show")
 def show_users(db: Session = Depends(get_db)):
     return db.query(User).all()
+
+
+@app.post("/expenses")
+def add_expense(
+    expense: ExpenseCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    db_expense = Expense(
+        user_id=current_user.id,
+        amount=expense.amount,
+        date=expense.date
+    )
+
+    db.add(db_expense)
+    db.commit()
+    db.refresh(db_expense)
+
+    return db_expense
