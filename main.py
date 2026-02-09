@@ -1,13 +1,18 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-from schemas import ExpenseCreate, UserCreate, UserLogin
-from models import Expense, User
-from database import SessionLocal
+from database import Base, engine, SessionLocal
+from models import User, Expense
+from schemas import UserCreate, UserLogin, ExpenseCreate
 from password_utlis import hash_password, verify_password
-from jwt_utils import create_token
-from password_utlis import pwd_context
+from jwt_utils import create_token, get_current_user
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+
+# OAuth2 scheme for Swagger / token dependency
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+
 app = FastAPI()
 
+# --- Database dependency ---
 def get_db():
     db = SessionLocal()
     try:
@@ -15,6 +20,12 @@ def get_db():
     finally:
         db.close()
 
+# --- Home route ---
+@app.get("/")
+def greetings():
+    return {"message": "Hello, Welcome to the Expense Tracker API!"}
+
+# --- Signup route ---
 @app.post("/signup")
 def signup(user: UserCreate, db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.username == user.username).first()
@@ -22,46 +33,34 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="User already exists")
 
     hashed_pwd = hash_password(user.password)
-
-    db_user = User(
-        username=user.username,
-        hashed_password=hashed_pwd
-    )
+    db_user = User(username=user.username, hashed_password=hashed_pwd)
 
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
 
     return {"message": "User created successfully"}
-  
-  
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
 
-
+# --- Login route ---
 @app.post("/login")
-def login(user: UserLogin, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.username == user.username).first()
-    
-    if not db_user:
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.username == form_data.username).first()
+    if not db_user or not verify_password(form_data.password, db_user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    # use hashed_password
-    if not verify_password(user.password, db_user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid username or password")
+    token = create_token(db_user.username)
+    return {"access_token": token, "token_type": "bearer"}
 
-    return {"msg": "Login successful"}
-
-
+# --- Show all users (for testing) ---
 @app.get("/show")
 def show_users(db: Session = Depends(get_db)):
     return db.query(User).all()
 
-
-@app.post("/expenses")
+# --- Add expense (protected) ---
+@app.post("/add_expenses")
 def add_expense(
     expense: ExpenseCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),  # <-- uses JWT from jwt_utils
     db: Session = Depends(get_db)
 ):
     db_expense = Expense(
@@ -69,9 +68,16 @@ def add_expense(
         amount=expense.amount,
         date=expense.date
     )
-
     db.add(db_expense)
     db.commit()
     db.refresh(db_expense)
-
     return db_expense
+
+# --- Get my expenses (protected) ---
+@app.get("/get_expenses")
+def get_my_expenses(
+    current_user: User = Depends(get_current_user),  # <-- uses JWT from jwt_utils
+    db: Session = Depends(get_db)
+):
+    expenses = db.query(Expense).filter(Expense.user_id == current_user.id).all()
+    return expenses

@@ -10,7 +10,6 @@ class UserLogin(BaseModel):
     password: str    
     
 class ExpenseCreate(BaseModel):
-    user_id: int
     amount: float
     date: date
     
