@@ -10,8 +10,16 @@ class UserLogin(BaseModel):
     password: str    
     
 class ExpenseCreate(BaseModel):
-    amount: float
+    amount: int
     date: date
     
+class ExpenseOut(BaseModel):
+    id: int
+    user_id: int
+    amount: int
+    date: date
+
+    class Config:
+        orm_mode = True
     
         
