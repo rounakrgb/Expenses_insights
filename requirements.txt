@@ -7,3 +7,4 @@ python-jose[cryptography]
 pytest
 httpx
 python-multipart
+psycopg2
