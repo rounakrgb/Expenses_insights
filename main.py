@@ -1,4 +1,4 @@
-import token
+
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import Base, engine, SessionLocal
@@ -8,6 +8,7 @@ from password_utlis import hash_password, verify_password
 from jwt_utils import create_token, get_current_user
 from fastapi.security import OAuth2PasswordRequestForm, HTTPBearer
 from typing import List
+
 
 # Use HTTPBearer instead of OAuth2PasswordBearer
 bearer_scheme = HTTPBearer()
@@ -49,10 +50,12 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == form_data.username).first()
+
     if not db_user or not verify_password(form_data.password, db_user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    token = create_token(db_user.username)
+    token = create_token({"sub": db_user.username})
+
     return {"access_token": token, "token_type": "bearer"}
 
 # --- Show all users (for testing) ---
