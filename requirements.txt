@@ -8,4 +8,4 @@ pytest
 httpx
 python-multipart
 psycopg2-binary
-jwt
+Pyjwt
