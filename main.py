@@ -1,3 +1,4 @@
+import token
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import Base, engine, SessionLocal
@@ -12,6 +13,8 @@ from typing import List
 bearer_scheme = HTTPBearer()
 
 app = FastAPI()
+
+Base.metadata.create_all(bind=engine)
 
 # --- Database dependency ---
 def get_db():
@@ -63,12 +66,21 @@ def add_expense(
     expense: ExpenseCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
-):
+):  
+    print("token recieved",current_user.username)
     db_expense = Expense(
         user_id=current_user.id,
         amount=expense.amount,
         date=expense.date
     )
+    
+    existing = db.query(Expense).filter(Expense.user_id == current_user.id, Expense.date == expense.date).first()
+
+    if existing:
+        existing.amount += expense.amount
+        db.commit()
+        db.refresh(existing)
+        return existing
     db.add(db_expense)
     db.commit()
     db.refresh(db_expense)
@@ -80,5 +92,6 @@ def get_my_expenses(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+
     expenses = db.query(Expense).filter(Expense.user_id == current_user.id).all()
     return expenses
