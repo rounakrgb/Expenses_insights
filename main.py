@@ -2,13 +2,14 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import Base, engine, SessionLocal
 from models import User, Expense
-from schemas import UserCreate, UserLogin, ExpenseCreate
+from schemas import UserCreate, ExpenseOut, ExpenseCreate
 from password_utlis import hash_password, verify_password
 from jwt_utils import create_token, get_current_user
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordRequestForm, HTTPBearer
+from typing import List
 
-# OAuth2 scheme for Swagger / token dependency
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+# Use HTTPBearer instead of OAuth2PasswordBearer
+bearer_scheme = HTTPBearer()
 
 app = FastAPI()
 
@@ -57,10 +58,10 @@ def show_users(db: Session = Depends(get_db)):
     return db.query(User).all()
 
 # --- Add expense (protected) ---
-@app.post("/add_expenses")
+@app.post("/add_expenses", response_model=ExpenseOut)
 def add_expense(
     expense: ExpenseCreate,
-    current_user: User = Depends(get_current_user),  # <-- uses JWT from jwt_utils
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     db_expense = Expense(
@@ -74,9 +75,9 @@ def add_expense(
     return db_expense
 
 # --- Get my expenses (protected) ---
-@app.get("/get_expenses")
+@app.get("/get_expenses", response_model=List[ExpenseOut])
 def get_my_expenses(
-    current_user: User = Depends(get_current_user),  # <-- uses JWT from jwt_utils
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     expenses = db.query(Expense).filter(Expense.user_id == current_user.id).all()
