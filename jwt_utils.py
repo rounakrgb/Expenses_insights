@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 from database import SessionLocal
@@ -9,7 +9,7 @@ import os
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 ALGORITHM = "HS256"
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+#oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 def get_db():
     db = SessionLocal()
@@ -19,10 +19,12 @@ def get_db():
         db.close()
 
 def create_token(username: str):
-    payload = {"sub": username}  # optionally add "exp" for expiry
+    payload = {"sub": username}  
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+bearer_scheme = HTTPBearer()
+def get_current_user( credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme), db: Session = Depends(get_db) ): 
+    token = credentials.credentials
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username = payload.get("sub")
