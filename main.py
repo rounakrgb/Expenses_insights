@@ -14,7 +14,7 @@ bearer_scheme = HTTPBearer()
 
 app = FastAPI()
 
-Base.metadata.create_all(bind=engine)
+
 
 # --- Database dependency ---
 def get_db():
