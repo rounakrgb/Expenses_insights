@@ -1,6 +1,10 @@
 from fastapi.testclient import TestClient
 from main import app
 
+from database import Base, engine
+
+Base.metadata.create_all(bind=engine)
+
 client = TestClient(app)
 
 def test_signup():
