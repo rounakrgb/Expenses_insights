@@ -8,7 +8,11 @@ from password_utlis import hash_password, verify_password
 from jwt_utils import create_token, get_current_user
 from fastapi.security import OAuth2PasswordRequestForm, HTTPBearer
 from typing import List
+import logging
 
+logging.basicConfig(level = logging.DEBUG, format = '%(asctime)s - %(levelname)s - %(message)s')
+
+logger = logging.getLogger(__name__)
 
 # Use HTTPBearer instead of OAuth2PasswordBearer
 bearer_scheme = HTTPBearer()
@@ -33,6 +37,7 @@ def greetings():
 # --- Signup route ---
 @app.post("/signup")
 def signup(user: UserCreate, db: Session = Depends(get_db)):
+    logger.info(f"Signup attempt for username: {user.username}")
     existing_user = db.query(User).filter(User.username == user.username).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
